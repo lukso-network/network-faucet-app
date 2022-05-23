@@ -13,4 +13,5 @@ FROM alpine
 RUN apk --no-cache add libstdc++ libgcc
 WORKDIR /app
 COPY --from=build-env /lukso-faucet /app/lukso-faucet
+EXPOSE 8080
 ENTRYPOINT ["/app/lukso-faucet"]

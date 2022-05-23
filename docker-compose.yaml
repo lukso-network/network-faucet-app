@@ -1,0 +1,24 @@
+version: "3.4"
+services:
+  lukso-faucet:
+    image: faucet:latest
+    container_name: lukso-faucet
+    stop_signal: SIGINT
+    stop_grace_period: 1m
+    working_dir: /app/
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./genesis.json:/app/genesis.json
+      - ./account.json:/app/account.json
+      - ./password:/app/password
+    command: >
+      --genesis=./genesis.json
+      --network=83748374
+      --bootnodes=enode://c2bb19ce658cfdf1fecb45da599ee6c7bf36e5292efb3fb61303a0b2cd07f96c20ac9b376a464d687ac456675a2e4a44aec39a0509bcb4b6d8221eedec25aca2@34.91.166.253:30303
+      --account.json=./account.json
+      --account.pass=./password
+      --faucet.amount=35
+      --faucet.minutes=5
+      --noauth
+    network_mode: bridge
