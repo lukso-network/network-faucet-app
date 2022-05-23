@@ -278,7 +278,7 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*enode.Node, network ui
 	//	return nil, err
 	//}
 
-	dial, err := rpc.Dial("http://34.90.20.132:8545")
+	dial, err := rpc.Dial("https://rpc.beta.l16.lukso.network")
 	if err != nil {
 		return nil, err
 	}
