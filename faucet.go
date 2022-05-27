@@ -390,7 +390,7 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// Keep reading requests from the websocket until the connection breaks
 	for {
-		// Fetch the next funding request and validate against github
+		// Fetch the next funding request and validate against .github
 		var msg struct {
 			URL     string `json:"url"`
 			Tier    uint   `json:"tier"`
@@ -471,7 +471,7 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 			id = username
 		default:
 			//lint:ignore ST1005 This error is to be displayed in the browser
-			err = errors.New("Something funky happened, please open an issue at https://github.com/ethereum/go-ethereum/issues")
+			err = errors.New("Something funky happened, please open an issue at https://.github.com/ethereum/go-ethereum/issues")
 		}
 		if err != nil {
 			if err = sendError(wsconn, err); err != nil {
