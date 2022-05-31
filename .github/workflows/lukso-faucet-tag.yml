@@ -5,7 +5,7 @@ on:
     tags:
       - '*'
 jobs:
-  geth-client-go:
+  faucet-client-go:
     runs-on: ubuntu-latest
 
     # id token
