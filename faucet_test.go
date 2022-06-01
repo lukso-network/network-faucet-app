@@ -17,14 +17,19 @@
 package main
 
 import (
+	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 )
 
 func TestFacebook(t *testing.T) {
-	// TODO: Remove facebook auth or implement facebook api, which seems to require an API key
-	t.Skipf("The facebook access is flaky, needs to be reimplemented or removed")
+	if os.Getenv("SKIP_FACEBOOK_TEST") != "" {
+		t.Skip()
+
+		return
+	}
+
 	for _, tt := range []struct {
 		url  string
 		want common.Address

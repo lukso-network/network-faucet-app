@@ -41,6 +41,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/eth"
+
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
@@ -51,7 +53,6 @@ import (
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/ethstats"
-	"github.com/ethereum/go-ethereum/les"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/p2p"
@@ -85,9 +86,7 @@ var (
 
 	twitterTokenFlag   = flag.String("twitter.token", "", "Bearer token to authenticate with the v2 Twitter API")
 	twitterTokenV1Flag = flag.String("twitter.token.v1", "", "Bearer token to authenticate with the v1.1 Twitter API")
-
-	goerliFlag  = flag.Bool("goerli", false, "Initializes the faucet with Görli network config")
-	rinkebyFlag = flag.Bool("rinkeby", false, "Initializes the faucet with Rinkeby network config")
+	notifyFlag         = flag.String("pandora.notify", "", "Comma separated URLs for Pandora engine")
 )
 
 var (
@@ -110,7 +109,7 @@ func main() {
 	for i := 0; i < *tiersFlag; i++ {
 		// Calculate the amount for the next tier and format it
 		amount := float64(*payoutFlag) * math.Pow(2.5, float64(i))
-		amounts[i] = fmt.Sprintf("%s Ethers", strconv.FormatFloat(amount, 'f', -1, 64))
+		amounts[i] = fmt.Sprintf("%s LYXt", strconv.FormatFloat(amount, 'f', -1, 64))
 		if amount == 1 {
 			amounts[i] = strings.TrimSuffix(amounts[i], "s")
 		}
@@ -147,12 +146,18 @@ func main() {
 		log.Crit("Failed to render the faucet template", "err", err)
 	}
 	// Load and parse the genesis block requested by the user
-	genesis, err := getGenesis(genesisFlag, *goerliFlag, *rinkebyFlag)
+	blob, err := ioutil.ReadFile(*genesisFlag)
 	if err != nil {
-		log.Crit("Failed to parse genesis config", "err", err)
+		log.Crit("Failed to read genesis block contents", "genesis", *genesisFlag, "err", err)
+	}
+	genesis := new(core.Genesis)
+	if err = json.Unmarshal(blob, genesis); err != nil {
+		log.Crit("Failed to parse genesis block json", "err", err)
 	}
 	// Convert the bootnodes to internal enode representations
-	var enodes []*enode.Node
+	var (
+		enodes []*enode.Node
+	)
 	for _, boot := range strings.Split(*bootFlag, ",") {
 		if url, err := enode.Parse(enode.ValidSchemes, boot); err == nil {
 			enodes = append(enodes, url)
@@ -160,9 +165,9 @@ func main() {
 			log.Error("Failed to parse bootnode URL", "url", boot, "err", err)
 		}
 	}
+
 	// Load up the account key and decrypt its password
-	blob, err := ioutil.ReadFile(*accPassFlag)
-	if err != nil {
+	if blob, err = ioutil.ReadFile(*accPassFlag); err != nil {
 		log.Crit("Failed to read account password contents", "file", *accPassFlag, "err", err)
 	}
 	pass := strings.TrimSuffix(string(blob), "\n")
@@ -229,10 +234,18 @@ type wsConn struct {
 
 func newFaucet(genesis *core.Genesis, port int, enodes []*enode.Node, network uint64, stats string, ks *keystore.KeyStore, index []byte) (*faucet, error) {
 	// Assemble the raw devp2p protocol stack
+	notifyUrls := strings.Split(*notifyFlag, ",")
+	cfg := ethconfig.Defaults
+
+	if len(notifyUrls) > 0 {
+		cfg.Miner.Notify = notifyUrls
+	}
+
 	stack, err := node.New(&node.Config{
 		Name:    "geth",
 		Version: params.VersionWithCommit(gitCommit, gitDate),
 		DataDir: filepath.Join(os.Getenv("HOME"), ".faucet"),
+		IPCPath: filepath.Join(os.Getenv("HOME"), ".faucet/geth/geth.ipc"),
 		P2P: p2p.Config{
 			NAT:              nat.Any(),
 			NoDiscovery:      true,
@@ -247,20 +260,19 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*enode.Node, network ui
 	}
 
 	// Assemble the Ethereum light client protocol
-	cfg := ethconfig.Defaults
-	cfg.SyncMode = downloader.LightSync
+	cfg.SyncMode = downloader.FullSync
 	cfg.NetworkId = network
 	cfg.Genesis = genesis
 	utils.SetDNSDiscoveryDefaults(&cfg, genesis.ToBlock(nil).Hash())
+	backend, err := eth.New(stack, &cfg)
 
-	lesBackend, err := les.New(stack, &cfg)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to register the Ethereum service: %w", err)
 	}
 
 	// Assemble the ethstats monitoring and reporting service'
 	if stats != "" {
-		if err := ethstats.New(stack, lesBackend.ApiBackend, lesBackend.Engine(), stats); err != nil {
+		if err := ethstats.New(stack, backend.APIBackend, backend.Engine(), stats); err != nil {
 			return nil, err
 		}
 	}
@@ -397,7 +409,7 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 		if err = conn.ReadJSON(&msg); err != nil {
 			return
 		}
-		if !*noauthFlag && !strings.HasPrefix(msg.URL, "https://twitter.com/") && !strings.HasPrefix(msg.URL, "https://www.facebook.com/") {
+		if !*noauthFlag && !strings.HasPrefix(msg.URL, "https://twitter.com/") {
 			if err = sendError(wsconn, errors.New("URL doesn't link to supported services")); err != nil {
 				log.Warn("Failed to send URL error to client", "err", err)
 				return
@@ -558,6 +570,7 @@ func (f *faucet) refresh(head *types.Header) error {
 			return err
 		}
 	}
+	log.Warn("This is head", "head", head)
 	// Retrieve the balance, nonce and gas price from the current head
 	var (
 		balance *big.Int
@@ -598,6 +611,12 @@ func (f *faucet) loop() {
 
 	// Start a goroutine to update the state from head notifications in the background
 	update := make(chan *types.Header)
+
+	err = f.refresh(nil)
+	if nil != err {
+		log.Error(err.Error())
+		err = nil
+	}
 
 	go func() {
 		for head := range update {
@@ -883,20 +902,4 @@ func authNoAuth(url string) (string, string, common.Address, error) {
 		return "", "", common.Address{}, errors.New("No Ethereum address found to fund")
 	}
 	return address.Hex() + "@noauth", "", address, nil
-}
-
-// getGenesis returns a genesis based on input args
-func getGenesis(genesisFlag *string, goerliFlag bool, rinkebyFlag bool) (*core.Genesis, error) {
-	switch {
-	case genesisFlag != nil:
-		var genesis core.Genesis
-		err := common.LoadJSON(*genesisFlag, &genesis)
-		return &genesis, err
-	case goerliFlag:
-		return core.DefaultGoerliGenesisBlock(), nil
-	case rinkebyFlag:
-		return core.DefaultRinkebyGenesisBlock(), nil
-	default:
-		return nil, fmt.Errorf("no genesis flag provided")
-	}
 }
