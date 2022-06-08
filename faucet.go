@@ -67,6 +67,7 @@ var (
 	bootFlag    = flag.String("bootnodes", "", "Comma separated bootnode enode URLs to seed with")
 	netFlag     = flag.Uint64("network", 0, "Network ID to use for the Ethereum protocol")
 	statsFlag   = flag.String("ethstats", "", "Ethstats network monitoring auth string")
+	rpcUrl = flag.String("rpc.url", "ws://127.0.0.1:8546", "RPC URL of bootnode")
 
 	netnameFlag = flag.String("faucet.name", "", "Network name to assign to the faucet")
 	payoutFlag  = flag.Int("faucet.amount", 1, "Number of Ethers to pay out per user request")
@@ -175,8 +176,17 @@ func main() {
 	if err := ks.Unlock(acc, pass); err != nil {
 		log.Crit("Failed to unlock faucet signer account", "err", err)
 	}
+
+	rawUrl, err := url.Parse(*rpcUrl)
+	if err != nil {
+		log.Crit("Invalid RPC URL of bootnode", "err", err)
+	}
+	if rawUrl.Scheme != "ws" {
+		log.Crit("Invalid RPC URL schema of bootnode", "err", err)
+	}
+
 	// Assemble and start the faucet light service
-	faucet, err := newFaucet(genesis, *ethPortFlag, enodes, *netFlag, *statsFlag, ks, website.Bytes())
+	faucet, err := newFaucet(genesis, *ethPortFlag, enodes, *rpcUrl, *netFlag, *statsFlag, ks, website.Bytes())
 	if err != nil {
 		log.Crit("Failed to start faucet", "err", err)
 	}
@@ -224,7 +234,7 @@ type wsConn struct {
 	wlock sync.Mutex
 }
 
-func newFaucet(genesis *core.Genesis, port int, enodes []*enode.Node, network uint64, stats string, ks *keystore.KeyStore, index []byte) (*faucet, error) {
+func newFaucet(genesis *core.Genesis, port int, enodes []*enode.Node, rawUrl string, network uint64, stats string, ks *keystore.KeyStore, index []byte) (*faucet, error) {
 	// Assemble the raw devp2p protocol stack
 	stack, err := node.New(&node.Config{
 		Name:    "geth",
@@ -278,7 +288,7 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*enode.Node, network ui
 	//	return nil, err
 	//}
 
-	dial, err := rpc.Dial("ws://34.91.166.253:8546")
+	dial, err := rpc.Dial(rawUrl)
 	if err != nil {
 		return nil, err
 	}
