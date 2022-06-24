@@ -47,7 +47,8 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64
           push: true
-          repository: europe-docker.pkg.dev/lks-lz-artifacts/docker-faucet/faucet
-          tags: latest, ${{ github.ref_name }}
-          #tags: |
-          #  europe-docker.pkg.dev/lks-lz-artifacts/docker-faucet/faucet:${{env.TAG}}
+          #repository: europe-docker.pkg.dev/lks-lz-artifacts/docker-faucet/faucet
+          #tags: latest, ${{ github.ref_name }}
+          tags: |
+            europe-docker.pkg.dev/lks-lz-artifacts/docker-faucet/faucet:${{ github.ref_name }}
+            europe-docker.pkg.dev/lks-lz-artifacts/docker-faucet/faucet:latest
