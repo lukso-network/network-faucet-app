@@ -1,0 +1,23 @@
+version: "3.4"
+services:
+  lukso-faucet:
+    image: europe-docker.pkg.dev/lks-lz-artifacts/docker-faucet/faucet:$FAUCET_VERSION
+    container_name: lukso-faucet
+    stop_signal: SIGINT
+    stop_grace_period: 1m
+    working_dir: /app/
+    ports:
+      - "80:8080"
+    volumes:
+      - $GENESIS_LOCATION:/app/genesis.json
+      - $ACCOUNT_FILE:/app/account.json
+      - $ACCOUNT_PASSWORD_FILE:/app/password
+    command: >
+      --genesis=./genesis.json
+      --network=83748374
+      --account.json=./account.json
+      --account.pass=./password
+      --faucet.amount=35
+      --faucet.minutes=5
+      --noauth
+    network_mode: bridge

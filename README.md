@@ -14,6 +14,7 @@ First thing's first, the `faucet` needs to connect to an Ethereum network, for w
 - `--genesis` is a path to a file containin the network `genesis.json`
 - `--network` is the devp2p network id used during connection
 - `--bootnodes` is a list of `enode://` ids to join the network through
+- `--rpc.url` is the IP of the enode server to join the network through
 
 The `faucet` will use the `les` protocol to join the configured Ethereum network and will store its data in `$HOME/.faucet` (currently not configurable).
 
