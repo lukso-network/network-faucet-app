@@ -70,9 +70,9 @@ var (
 	rpcUrl = flag.String("rpc.url", "ws://127.0.0.1:8546", "RPC URL of bootnode")
 
 	netnameFlag = flag.String("faucet.name", "", "Network name to assign to the faucet")
-	payoutFlag  = flag.Int("faucet.amount", 1, "Number of Ethers to pay out per user request")
+	payoutFlag  = flag.Int("faucet.amount", 1, "Number of LYX to pay out per user request")
 	minutesFlag = flag.Int("faucet.minutes", 1440, "Number of minutes to wait between funding rounds")
-	tiersFlag   = flag.Int("faucet.tiers", 3, "Number of funding tiers to enable (x3 time, x2.5 funds)")
+	tiersFlag   = flag.Int("faucet.tiers", 3, "Number of funding tiers to enable (x3 time, x2.0 funds)")
 
 	accJSONFlag = flag.String("account.json", "", "Key json file to fund user requests with")
 	accPassFlag = flag.String("account.pass", "", "Decryption password to access faucet funds")
@@ -112,8 +112,8 @@ func main() {
 	periods := make([]string, *tiersFlag)
 	for i := 0; i < *tiersFlag; i++ {
 		// Calculate the amount for the next tier and format it
-		amount := float64(*payoutFlag) * math.Pow(2.5, float64(i))
-		amounts[i] = fmt.Sprintf("%s Ethers", strconv.FormatFloat(amount, 'f', -1, 64))
+		amount := float64(*payoutFlag) * math.Pow(2.0, float64(i))
+		amounts[i] = fmt.Sprintf("%s LYX", strconv.FormatFloat(amount, 'f', -1, 64))
 		if amount == 1 {
 			amounts[i] = strings.TrimSuffix(amounts[i], "s")
 		}
@@ -501,8 +501,8 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 		if timeout = f.timeouts[id]; time.Now().After(timeout) {
 			// User wasn't funded recently, create the funding transaction
 			amount := new(big.Int).Mul(big.NewInt(int64(*payoutFlag)), ether)
-			amount = new(big.Int).Mul(amount, new(big.Int).Exp(big.NewInt(5), big.NewInt(int64(msg.Tier)), nil))
-			amount = new(big.Int).Div(amount, new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(msg.Tier)), nil))
+			amount = new(big.Int).Mul(amount, new(big.Int).Exp(big.NewInt(4), big.NewInt(int64(msg.Tier)), nil))
+			amount = new(big.Int).Div(amount, new(big.Int).Exp(big.NewInt(5), big.NewInt(int64(msg.Tier)), nil))
 
 			tx := types.NewTransaction(f.nonce+uint64(len(f.reqs)), address, amount, 21000, f.price, nil)
 			signed, err := f.keystore.SignTx(f.account, tx, f.config.ChainID)
