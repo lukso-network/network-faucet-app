@@ -1,4 +1,4 @@
-name: docker build for LUKSO faucet
+name: Build Lukso faucet docker-image
 
 on:
   push:
