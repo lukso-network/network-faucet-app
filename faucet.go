@@ -28,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"html/template"
 	"io"
-	"math"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -70,8 +69,8 @@ var (
 	rpcUrl = flag.String("rpc.url", "ws://127.0.0.1:8546", "RPC URL of bootnode")
 
 	netnameFlag = flag.String("faucet.name", "", "Network name to assign to the faucet")
-	payoutFlag  = flag.Int("faucet.amount", 1, "Number of LYX to pay out per user request")
-	minutesFlag = flag.Int("faucet.minutes", 1440, "Number of minutes to wait between funding rounds")
+	//payoutFlag  = flag.Int("faucet.amount", 1, "Number of LYX to pay out per user request")
+	//minutesFlag = flag.Int("faucet.minutes", 1440, "Number of minutes to wait between funding rounds")
 	tiersFlag   = flag.Int("faucet.tiers", 3, "Number of funding tiers to enable (x3 time, x2.0 funds)")
 
 	accJSONFlag = flag.String("account.json", "", "Key json file to fund user requests with")
@@ -110,29 +109,38 @@ func main() {
 	// Construct the payout tiers
 	amounts := make([]string, *tiersFlag)
 	periods := make([]string, *tiersFlag)
-	for i := 0; i < *tiersFlag; i++ {
-		// Calculate the amount for the next tier and format it
-		amount := float64(*payoutFlag) * math.Pow(5.0, float64(i))
-		amounts[i] = fmt.Sprintf("%s LYX", strconv.FormatFloat(amount, 'f', -1, 64))
-		if amount == 1 {
-			amounts[i] = strings.TrimSuffix(amounts[i], "s")
-		}
-		// Calculate the period for the next tier and format it
-		period := *minutesFlag * int(math.Pow(3, float64(i)))
-		periods[i] = fmt.Sprintf("%d mins", period)
-		if period%60 == 0 {
-			period /= 60
-			periods[i] = fmt.Sprintf("%d hours", period)
+	amounts[0] = fmt.Sprintf("%s LYX", strconv.FormatFloat(10, 'f', -1, 64))
+	periods[0] = fmt.Sprintf("%d h", 1)
 
-			if period%24 == 0 {
-				period /= 24
-				periods[i] = fmt.Sprintf("%d days", period)
-			}
-		}
-		if period == 1 {
-			periods[i] = strings.TrimSuffix(periods[i], "s")
-		}
-	}
+	amounts[1] = fmt.Sprintf("%s LYX", strconv.FormatFloat(50, 'f', -1, 64))
+	periods[1] = fmt.Sprintf("%d h", 3)
+
+	amounts[2] = fmt.Sprintf("%s LYX", strconv.FormatFloat(220, 'f', -1, 64))
+	periods[2] = fmt.Sprintf("%d days", 4)
+
+	//for i := 0; i < *tiersFlag; i++ {
+	//	// Calculate the amount for the next tier and format it
+	//	amount := float64(*payoutFlag) * math.Pow(5.0, float64(i))
+	//	amounts[i] = fmt.Sprintf("%s LYX", strconv.FormatFloat(amount, 'f', -1, 64))
+	//	if amount == 1 {
+	//		amounts[i] = strings.TrimSuffix(amounts[i], "s")
+	//	}
+	//	// Calculate the period for the next tier and format it
+	//	period := *minutesFlag * int(math.Pow(3, float64(i)))
+	//	periods[i] = fmt.Sprintf("%d mins", period)
+	//	if period%60 == 0 {
+	//		period /= 60
+	//		periods[i] = fmt.Sprintf("%d hours", period)
+	//
+	//		if period%24 == 0 {
+	//			period /= 24
+	//			periods[i] = fmt.Sprintf("%d days", period)
+	//		}
+	//	}
+	//	if period == 1 {
+	//		periods[i] = strings.TrimSuffix(periods[i], "s")
+	//	}
+	//}
 	website := new(bytes.Buffer)
 	err := template.Must(template.New("").Parse(websiteTmpl)).Execute(website, map[string]interface{}{
 		"Network":   *netnameFlag,
@@ -500,9 +508,23 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 		)
 		if timeout = f.timeouts[id]; time.Now().After(timeout) {
 			// User wasn't funded recently, create the funding transaction
-			amount := new(big.Int).Mul(big.NewInt(int64(*payoutFlag)), ether)
-			amount = new(big.Int).Mul(amount, new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(msg.Tier)), nil))
-			amount = new(big.Int).Div(amount, new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(msg.Tier)), nil))
+			var amount *big.Int
+			var timeout time.Duration
+			switch msg.Tier {
+			case 1:
+				amount = new(big.Int).Mul(big.NewInt(int64(10)), ether)
+				timeout = 60 * time.Minute
+			case 2:
+				amount = new(big.Int).Mul(big.NewInt(int64(50)), ether)
+				timeout = 180 * time.Minute
+			case 3:
+				amount = new(big.Int).Mul(big.NewInt(int64(220)), ether)
+				timeout = 5760 * time.Minute // 4 days
+			}
+
+			//amount := new(big.Int).Mul(big.NewInt(int64(*payoutFlag)), ether)
+			//amount = new(big.Int).Mul(amount, new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(msg.Tier)), nil))
+			//amount = new(big.Int).Div(amount, new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(msg.Tier)), nil))
 
 			tx := types.NewTransaction(f.nonce+uint64(len(f.reqs)), address, amount, 21000, f.price, nil)
 			signed, err := f.keystore.SignTx(f.account, tx, f.config.ChainID)
@@ -529,7 +551,7 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 				Time:    time.Now(),
 				Tx:      signed,
 			})
-			timeout := time.Duration(*minutesFlag*int(math.Pow(3, float64(msg.Tier)))) * time.Minute
+			//timeout := time.Duration(*minutesFlag*int(math.Pow(3, float64(msg.Tier)))) * time.Minute
 			grace := timeout / 288 // 24h timeout => 5m grace
 
 			f.timeouts[id] = time.Now().Add(timeout - grace)
