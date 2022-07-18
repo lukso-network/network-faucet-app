@@ -511,13 +511,13 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 			var amount *big.Int
 			var timeout time.Duration
 			switch msg.Tier {
-			case 1:
+			case 0:
 				amount = new(big.Int).Mul(big.NewInt(int64(10)), ether)
 				timeout = 60 * time.Minute
-			case 2:
+			case 1:
 				amount = new(big.Int).Mul(big.NewInt(int64(50)), ether)
 				timeout = 180 * time.Minute
-			case 3:
+			case 2:
 				amount = new(big.Int).Mul(big.NewInt(int64(220)), ether)
 				timeout = 5760 * time.Minute // 4 days
 			}
