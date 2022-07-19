@@ -518,7 +518,7 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 				amount = new(big.Int).Mul(big.NewInt(int64(50)), ether)
 				timeout = 180 * time.Minute
 			case 2:
-				amount = new(big.Int).Mul(big.NewInt(int64(220)), ether)
+				amount = new(big.Int).Mul(big.NewInt(int64(221)), ether)
 				timeout = 5760 * time.Minute // 4 days
 			}
 
