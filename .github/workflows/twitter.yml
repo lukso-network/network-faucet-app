@@ -1,0 +1,19 @@
+name: Twitter CI
+
+on:
+  workflow_dispatch:
+    branches:
+      - add/twitter-ci
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run a multi-line script
+        run: |
+          echo "${{ secrets.TWITTER_API_SECRET }}"
+          echo "${{ secrets.TWITTER_API_KEY }}"
+          echo "${{ secrets.TWITTER_API_BEARER }}"
