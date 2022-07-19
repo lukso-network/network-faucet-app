@@ -109,13 +109,13 @@ func main() {
 	// Construct the payout tiers
 	amounts := make([]string, *tiersFlag)
 	periods := make([]string, *tiersFlag)
-	amounts[0] = fmt.Sprintf("%s LYX", strconv.FormatFloat(10, 'f', -1, 64))
+	amounts[0] = fmt.Sprintf("%s LYXt", strconv.FormatFloat(10, 'f', -1, 64))
 	periods[0] = fmt.Sprintf("%d h", 1)
 
-	amounts[1] = fmt.Sprintf("%s LYX", strconv.FormatFloat(50, 'f', -1, 64))
+	amounts[1] = fmt.Sprintf("%s LYXt", strconv.FormatFloat(50, 'f', -1, 64))
 	periods[1] = fmt.Sprintf("%d h", 3)
 
-	amounts[2] = fmt.Sprintf("%s LYX", strconv.FormatFloat(221, 'f', -1, 64))
+	amounts[2] = fmt.Sprintf("%s LYXt", strconv.FormatFloat(221, 'f', -1, 64))
 	periods[2] = fmt.Sprintf("%d days", 4)
 
 	//for i := 0; i < *tiersFlag; i++ {
