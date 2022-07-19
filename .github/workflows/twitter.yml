@@ -12,8 +12,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Run a multi-line script
+      - name: Set up secret file
+        env:
+          TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }} 
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_BEARER: ${{ secrets.TWITTER_API_BEARER }}
         run: |
-          echo "${{ secrets.TWITTER_API_SECRET }}"
-          echo "${{ secrets.TWITTER_API_KEY }}"
-          echo "${{ secrets.TWITTER_API_BEARER }}"
+          echo $TWITTER_API_SECRET >> secrets.txt
+          echo $TWITTER_API_KEY >> secrets.txt
+          echo $TWITTER_API_BEARER >> secrets.txt
+
+      - name: Run tmate
+        uses: mxschmitt/action-tmate@v2
