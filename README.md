@@ -1,4 +1,4 @@
-# L16 Faucet
+# Testnet Faucet
 
 
 The `faucet` is a simplistic web application with the goal of distributing small amounts of Ether in private and test networks.
