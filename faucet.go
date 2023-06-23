@@ -58,6 +58,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/nat"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/gorilla/websocket"
+	"github.com/mmcloughlin/professor"
 )
 
 var (
@@ -325,9 +326,10 @@ func (f *faucet) close() error {
 func (f *faucet) listenAndServe(port int) error {
 	go f.loop()
 
+	// prevent pprof to be exposed on LB port
+	professor.Launch(":8989")
 	http.HandleFunc("/", f.webHandler)
 	http.HandleFunc("/api", f.apiHandler)
-	http.HandleFunc("/debug/pprof", f.debugHandler)
 	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 }
 
@@ -335,20 +337,6 @@ func (f *faucet) listenAndServe(port int) error {
 // faucet website.
 func (f *faucet) webHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(f.index)
-}
-
-// debugHandler handles restriction of access to /debug/pprof url
-// faucet website.
-func (f *faucet) debugHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusForbidden)
-	w.Header().Set("Content-Type", "application/json")
-	resp := make(map[string]string)
-	resp["message"] = "Forbidden"
-	jsonResp, err := json.Marshal(resp)
-	if err != nil {
-		log.Crit("Error happened in JSON marshal", "err", err)
-	}
-	w.Write(jsonResp)
 }
 
 // apiHandler handles requests for Ether grants and transaction statuses.
