@@ -421,7 +421,7 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 		if err = conn.ReadJSON(&msg); err != nil {
 			return
 		}
-		if !*noauthFlag && !strings.HasPrefix(msg.URL, "https://twitter.com/") && !strings.HasPrefix(msg.URL, "https://www.facebook.com/") {
+		if !*noauthFlag && !strings.HasPrefix(msg.URL, "https://twitter.com/") && !strings.HasPrefix(msg.URL, "https://www.facebook.com/") && !strings.HasPrefix(msg.URL, "https://x.com/") {
 			if err = sendError(wsconn, errors.New("URL doesn't link to supported services")); err != nil {
 				log.Warn("Failed to send URL error to client", "err", err)
 				return
@@ -483,7 +483,7 @@ func (f *faucet) apiHandler(w http.ResponseWriter, r *http.Request) {
 			address  common.Address
 		)
 		switch {
-		case strings.HasPrefix(msg.URL, "https://twitter.com/"):
+		case strings.HasPrefix(msg.URL, "https://twitter.com/") || strings.HasPrefix(msg.URL, "https://x.com/"):
 			id, username, avatar, address, err = authTwitter(msg.URL, *twitterTokenV1Flag, *twitterTokenFlag)
 		case strings.HasPrefix(msg.URL, "https://www.facebook.com/"):
 			username, avatar, address, err = authFacebook(msg.URL)
